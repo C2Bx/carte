@@ -75,9 +75,3 @@ Mettez à jour les coordonnées GPS, les noms et les descriptions des clubs selo
 
 Icônes de carte : {OpenStreetMap}{https://www.openstreetmap.org/}.
 Animation des joueurs : Utilisation d'images animées créées à l'aide de {Piskel}{https://www.piskelapp.com/}.
-Étapes à suivre dans Ctrl ` H pour remettre les symboles originaux :
-Remplacer # par #
-Remplacer ` par ` (backtick)
-Remplacer [ ] par [ ]
-Remplacer ( ) par ( )
-Vous pouvez maintenant copier-coller ce texte dans votre éditeur et effectuer les remplacements nécessaires avec Ctrl ` H.#

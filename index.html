@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Carte interactive des clubs et stades de football en Nouvelle-Calédonie, avec options de filtrage par région.">
+    <title>Carte des Clubs et Stades de Football en Nouvelle-Calédonie</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" loading="lazy">
+    <style>
+        :root {
+            --primary-color: #C1272D;
+            --secondary-color: #9D9FA2;
+            --background-color: #f3f3f3;
+            --text-color: #333;
+            --border-color: #ccc;
+            --box-shadow-color: rgba(0, 0, 0, 0.1);
+            --transition-speed: 0.3s;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin: 2rem 0;
+            font-size: 2rem;
+        }
+
+        #map {
+            height: 90vh;
+            flex: 1;
+            transition: width var(--transition-speed) ease;
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .sidebar {
+            width: 20vw;
+            max-width: 300px;
+            background-color: #fff;
+            border-left: 1px solid var(--border-color);
+            padding: 2rem;
+            box-shadow: -2px 0 5px var(--box-shadow-color);
+            overflow-y: auto;
+            transition: transform var(--transition-speed) ease, width var(--transition-speed) ease;
+        }
+
+        .sidebar.hidden {
+            transform: translateX(100%);
+            position: absolute;
+            right: 0;
+        }
+
+        .toggle-sidebar {
+            position: absolute;
+            top: 50%;
+            right: 0;
+            transform: translateY(-50%);
+            background-color: var(--primary-color);
+            color: white;
+            padding: 1rem;
+            cursor: pointer;
+            border-radius: 5px 0 0 5px;
+            z-index: 1000;
+            transition: right var(--transition-speed) ease;
+        }
+
+        .club-card {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            cursor: pointer;
+            transition: background-color var(--transition-speed) ease;
+        }
+
+        .club-card:hover {
+            background-color: #ececec;
+        }
+
+        .club-card h3 {
+            margin: 0 0 1rem;
+            color: var(--primary-color);
+            font-size: 1.5rem;
+        }
+
+        .club-card p {
+            margin: 0.5rem 0;
+            font-size: 1rem;
+        }
+
+        .leaflet-popup-content-wrapper {
+            background-color: #fff;
+            color: #000;
+            border: 1px solid #333;
+            border-radius: 0.5rem;
+        }
+
+        .filters {
+            text-align: center;
+            margin: 2rem 0;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 1rem 2rem;
+            margin: 0.5rem;
+            border-radius: 0.5rem;
+            text-decoration: none;
+            font-size: 1rem;
+            cursor: pointer;
+            border: none;
+            transition: background-color var(--transition-speed) ease;
+        }
+
+        .button1 {
+            background-color: var(--primary-color);
+            color: #fff;
+        }
+
+        .button1:hover {
+            background-color: #a02024;
+        }
+
+        .button2 {
+            background-color: var(--secondary-color);
+            color: #fff;
+        }
+
+        .button2:hover {
+            background-color: #7d7f82;
+        }
+
+        .button3 {
+            background-color: transparent;
+            color: var(--primary-color);
+            border: 2px solid var(--primary-color);
+        }
+
+        .button3:hover {
+            background-color: var(--primary-color);
+            color: #fff;
+        }
+
+        .button:focus {
+            outline: none;
+            box-shadow: 0 0 5px var(--primary-color);
+        }
+
+        @media (max-width: 768px) {
+            #map {
+                height: 100vh;
+            }
+
+            .sidebar {
+                width: 60vw;
+                padding: 1rem;
+            }
+
+            .toggle-sidebar {
+                padding: 0.5rem;
+            }
+
+            .club-card {
+                padding: 1rem;
+                margin-bottom: 1rem;
+            }
+
+            .club-card h3 {
+                font-size: 1.25rem;
+            }
+
+            .filters {
+                margin: 1rem 0;
+            }
+
+            .button {
+                padding: 0.75rem 1.5rem;
+                font-size: 0.875rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .sidebar {
+                width: 80vw;
+            }
+
+            .club-card h3 {
+                font-size: 1rem;
+            }
+
+            .filters {
+                margin: 0.5rem 0;
+            }
+
+            .button {
+                padding: 0.5rem 1rem;
+                font-size: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Carte des Clubs et Stades de Football en Nouvelle-Calédonie</h1>
+
+    <div class="filters" role="group" aria-label="Filtres des clubs">
+        <button class="button button1" onclick="filterClubs('Nord')">Nord</button>
+        <button class="button button2" onclick="filterClubs('Sud')">Sud</button>
+        <button class="button button3" onclick="filterClubs('Îles')">Îles</button>
+        <button class="button" onclick="filterClubs('')">Tous</button>
+    </div>
+    <div class="main-content">
+        <div id="map" role="region" aria-label="Carte des clubs de football"></div>
+        <div class="sidebar" id="clubList" aria-label="Liste des clubs"></div>
+        <div id="toggleSidebar" class="toggle-sidebar">&#x25C0;</div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js" loading="lazy"></script>
+    <script>
+        const map = L.map('map', {
+            center: [-21.299, 165.381],
+            zoom: 6,
+            minZoom: 7,
+            maxZoom: 18,
+            maxBounds: [[-10, 150], [-30, 180]]
+        });
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+const clubs = [
+    {
+        id: 1,
+        name: "AS Magenta",
+        lat: -22.265568,
+        lon: 166.467826,
+        year: 1968,
+        stadium: "Stade Numa-Daly",
+        description: "L'un des clubs les plus titrés de Nouvelle-Calédonie, avec de multiples victoires en championnat local et des participations régulières en Ligue des champions de l'OFC, AS Magenta représente une puissance du football calédonien.",
+        province: "Sud",
+        logo: "https://zako.nc/sae/carte/img/5.png"
+    },
+    {
+        id: 2,
+        name: "Hienghène Sport",
+        lat: -20.691634,
+        lon:  164.947314,
+        year: 1997,
+        stadium: "Stade de Hienghène",
+        description: "Club emblématique du Nord, Hienghène Sport a marqué l'histoire du football calédonien en remportant la Ligue des champions de l'OFC en 2019. C'est le premier club de Nouvelle-Calédonie à avoir participé à la Coupe du Monde des Clubs de la FIFA.",
+        province: "Nord",
+        logo: "https://zako.nc/sae/carte/img/1.png"
+    },
+    {
+        id: 3,
+        name: "AS Lössi",
+        lat: -22.265568,
+        lon: 166.467826,
+        year: 1963,
+        stadium: "Stade Numa-Daly",
+        description: "Connu pour son style de jeu technique et rapide, l'AS Lössi est un compétiteur régulier dans les compétitions nationales et régionales, avec plusieurs participations notables en Ligue des champions de l'OFC.",
+        province: "Sud",
+        logo: "https://zako.nc/sae/carte/img/6.png"
+    },
+    {
+        id: 4,
+        name: "SC Ne Drehu",
+        lat: -20.921663,
+        lon: 167.269662,
+        year: 1970,
+        stadium: "Stade Hnassé",
+        description: "Club majeur de Lifou, le SC Ne Drehu est connu pour son dynamisme et sa capacité à produire des talents locaux. Le club est un acteur respecté dans les compétitions nationales et régionales.",
+        province: "Îles",
+        logo: "https://zako.nc/sae/carte/img/7.png"
+    },
+    {
+        id: 5,
+        name: "AS Mont-Dore",
+        lat: -22.263285, 
+        lon: 166.564618,
+        year: 1987,
+        stadium: "Stade de la Coulée",
+        description: "Représentant incontournable du football du Sud, l'AS Mont-Dore a une tradition de formation de jeunes talents et se distingue par sa participation régulière aux grandes compétitions calédoniennes.",
+        province: "Sud",
+        logo: "https://zako.nc/sae/carte/img/2.png"
+    },
+    {
+        id: 6,
+        name: "AS Poum",
+        lat: -20.2336,
+        lon: 164.0192,
+        year: 2005,
+        stadium: "Stade de Poum",
+        description: "Petit club rural, l'AS Poum joue un rôle essentiel dans la promotion du football dans les zones reculées du Nord. Il est également un acteur important dans le développement de la jeunesse locale.",
+        province: "Nord",
+        logo: "https://zako.nc/sae/carte/img/4.png"
+    },
+    {
+        id: 7,
+        name: "AS Horizon Patho",
+        lat: -21.482568,
+        lon:  168.034538,
+        year: 1988,
+        stadium: "Stade de Maré",
+        description: "AS Horizon Patho incarne les valeurs culturelles de Maré et se distingue par son engagement actif dans la communauté locale, tout en participant activement aux compétitions régionales.",
+        province: "Îles",
+        logo: "https://zako.nc/sae/carte/img/8.png"
+    },
+    {
+        id: 8,
+        name: "AS Wetr",
+        lat: -20.930665,
+        lon:  165.322263,
+        year: 1990,
+        stadium: "Stade de Poindimié",
+        description: "Le club est un pilier du football à Poindimié, avec un engagement fort dans le développement du sport dans cette région du Nord.",
+        province: "Nord",
+        logo: "https://zako.nc/sae/carte/img/9.png"
+    },
+    {
+        id: 9,
+        name: "AS Goa",
+        lat: -20.559266,
+        lon: 164.282371,
+        year: 1995,
+        stadium: "Stade de Koumac",
+        description: "Actif dans la région de Koumac, l'AS Goa est un représentant important du football dans le Nord, participant régulièrement aux compétitions locales.",
+        province: "Nord",
+        logo: "https://zako.nc/sae/carte/img/balllon.svg"
+    },
+    { 
+        id: 10,
+        name: "AS Kunie",
+        lat: -22.265568,
+        lon: 166.467826,
+        year: 1958,
+        stadium: "Stade Numa-Daly",
+        description: "Club basé à l'île des Pins, AS Kunie est un symbole de l'identité footballistique locale. Il participe activement au développement du sport sur l'île tout en prenant part aux compétitions régionales et provinciales.",
+        province: "Sud",
+        logo: "https://zako.nc/sae/carte/img/3.png"
+    },
+    {
+        id: 11,
+        name: "AS Tiga Sport",
+        lat: -22.265568,
+        lon: 166.467826,
+        year: 1965,
+        stadium: "Stade Numa-Daly",
+        description: "AS Tiga Sport est un club bien établi dans le football calédonien, évoluant régulièrement dans les compétitions nationales, avec des ambitions internationales à travers la Ligue des champions de l'OFC.",
+        province: "Sud",
+        logo: "https://zako.nc/sae/carte/img/10.png"
+    },
+    {
+        id: 12,
+        name: "CA Saint-Louis",
+        lat: -22.228995,
+        lon: 166.549476,
+        year: 1953,
+        stadium: "Stade de Saint-Louis",
+        description: "Ancien grand club historique, le CA Saint-Louis a une riche histoire dans le football calédonien et continue de former des jeunes talents dans la région.",
+        province: "Sud",
+        logo: "https://zako.nc/sae/carte/img/11.png"
+    },
+    {
+        id: 13,
+        name: "ASC Boulouparis",
+        lat: -21.859715,
+        lon: 166.052459,
+        year: 1963,
+        stadium: "Stade de Boulouparis",
+        description: "Le club de Boulouparis, bien ancré dans sa communauté, est un acteur actif dans le football régional et contribue à l'émergence de talents locaux.",
+        province: "Sud",
+        logo: "https://zako.nc/sae/carte/img/12.png"
+    },
+    {
+        id: 14,
+        name: "AS Thio Sport",
+        lat: -21.609069,
+        lon: 166.212433,
+        year: 1,
+        stadium: "Stade Edouard Pentecost",
+        description: "Le club de Thio est l'un des plus anciens de la région, bien que son année exacte de fondation soit difficile à retracer. Il est actif dans le développement du sport au niveau local.",
+        province: "Sud",
+        logo: "https://zako.nc/sae/carte/img/13.png"
+    },
+    {
+        id: 15,
+        name: "Club Omnisport de Hmelek",
+        lat: -21.609069,
+        lon: 166.212433,
+        year: 1,
+        stadium: "Stade Edouard Pentecost",
+        description: "Situé à Lifou, ce club omnisport est connu pour son implication dans diverses disciplines, y compris le football, avec une forte communauté de supporters locaux.",
+        province: "Sud",
+        logo: "https://zako.nc/sae/carte/img/14.png"
+    },
+    {
+        id: 16,
+        name: "Paita Football Club",
+        lat: -22.140255,
+        lon: 166.366317,
+        year: 2008,
+        stadium: "Stade Municipale de Païta",
+        description: "Le club de Païta a une histoire récente mais dynamique, avec un fort engagement envers la jeunesse locale. Il a été fondé en 2008 et continue de croître en nombre de licenciés chaque année.",
+        province: "Sud",
+        logo: "https://zako.nc/sae/carte/img/15.png"
+    },
+    {
+        id: 17,
+        name: "Union Sportive Caledonienne",
+        lat: -22.140255,
+        lon: 166.366317,
+        year: 2008,
+        stadium: "Stade Municipale de Païta",
+        description: "L'Union Sportive Calédonienne, située également à Païta, partage une mission similaire à celle de Païta Football Club, en développant le football chez les jeunes de la région.",
+        province: "Sud",
+        logo: "https://zako.nc/sae/carte/img/balllon.svg"
+    }
+];
+
+
+        let markers = [];
+
+        function filterClubs(province) {
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+
+            const clubList = document.getElementById('clubList');
+            clubList.innerHTML = '';
+
+            clubs.forEach(club => {
+                if (!province || club.province === province) {
+                    const popupContent = `<b>${club.name}</b><br>Année de fondation: ${club.year || "Non disponible"}<br>Stade: ${club.stadium}<br>${club.description}`;
+                    const marker = L.marker([club.lat, club.lon], {
+                        icon: L.icon({
+                            iconUrl: 'img/balllon.svg',
+                            iconSize: [30, 30],
+                            iconAnchor: [24, 48],
+                            popupAnchor: [0, -48]
+                        })
+                    }).addTo(map).bindPopup(popupContent);
+                    
+                    markers.push(marker);
+
+                    const clubCard = document.createElement('div');
+                    clubCard.className = 'club-card';
+                    clubCard.setAttribute('data-club-id', club.id);
+                    clubCard.innerHTML = `
+                        <h3>${club.name}</h3>
+                        <p><b>Année de fondation:</b> ${club.year || "Non disponible"}</p>
+                        <p><b>Stade:</b> ${club.stadium}</p>
+                        <div style="text-align: center;">
+                            <img src="${club.logo}" alt="logo du club : ${club.name}" style="max-width: 100px; max-height: 100px;">
+                        </div>
+                        
+                    `;
+
+                    clubCard.addEventListener('click', () => {
+                        map.flyTo(marker.getLatLng(), 14, { animate: true, duration: 1.5 });
+                        marker.openPopup();
+                    });
+
+                    clubList.appendChild(clubCard);
+
+                    marker.on('click', () => {
+                        const sidebar = document.getElementById('clubList');
+                        if (!sidebar.classList.contains('hidden')) {
+                            document.querySelectorAll('.club-card').forEach(card => card.classList.remove('active'));
+                            const activeCard = document.querySelector(`.club-card[data-club-id="${club.id}"]`);
+                            if (activeCard) {
+                                activeCard.classList.add('active');
+                                activeCard.scrollIntoView({ behavior: 'smooth' });
+                            }
+                        }
+                        map.flyTo(marker.getLatLng(), 14, { animate: true, duration: 1.5 });
+                        marker.openPopup();
+                    });
+                }
+            });
+        }
+
+        filterClubs('');
+
+        document.getElementById('toggleSidebar').addEventListener('click', () => {
+            const sidebar = document.getElementById('clubList');
+            const toggleButton = document.getElementById('toggleSidebar');
+            const mapElement = document.getElementById('map');
+
+            if (sidebar.classList.contains('hidden')) {
+                sidebar.classList.remove('hidden');
+                toggleButton.innerHTML = '&#x25C0;';
+                mapElement.style.width = 'calc(100% - 20vw)';
+            } else {
+                sidebar.classList.add('hidden');
+                toggleButton.innerHTML = '&#x25B6;';
+                mapElement.style.width = '100%';
+            }
+
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 310);
+        });
+
+        const konamiCode = ['f', 'o', 'o', 't'];
+        let konamiIndex = 0;
+
+        document.addEventListener('keydown', (event) => {
+            const key = event.key.toLowerCase();
+            
+            if (key === konamiCode[konamiIndex]) {
+                konamiIndex++;
+                if (konamiIndex === konamiCode.length) {
+                    // Redirection lorsque le Konami Code est entièrement saisi
+                    window.location.href = 'foot.html';
+                }
+            } else {
+                konamiIndex = 0; // Réinitialiser si la séquence est incorrecte
+            }
+        });
+    </script>
+</body>
+</html>
